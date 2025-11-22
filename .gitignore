@@ -1,0 +1,103 @@
+# ============================================
+# Python
+# ============================================
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Distribution / packaging
+build/
+dist/
+*.egg-info/
+.eggs/
+wheels/
+pip-wheel-metadata/
+MANIFEST
+
+# Virtual environment
+.venv/
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Installer logs
+pip-log.txt
+pip-delete-this-directory.txt
+
+# PyCache for PyQt / QScintilla
+*.qmlc
+*.jsc
+
+# ============================================
+# PyQt6 / Qt / Designer
+# ============================================
+*.ui.py        # auto-generated from .ui files (if generated manually)
+*.qrc.py        # qrc compiled python files
+*.qrc          # Qt resource files (optional: include if needed)
+
+# Qt temp build artifacts
+*.pro.user
+*.pro.user.*
+*.qmake.stash
+*.qmake.cache
+
+# ============================================
+# QScintilla / Editor configs
+# ============================================
+*.api           # QScintilla API files
+*.tags
+*.swp
+
+# ============================================
+# IDE / Editor
+# ============================================
+.vscode/
+.idea/
+*.code-workspace
+
+# PyCharm
+*.iml
+
+# Jupyter
+.ipynb_checkpoints/
+
+# ============================================
+# OS / System files
+# ============================================
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ============================================
+# Logs / Runtime files
+# ============================================
+*.log
+logs/
+
+# ============================================
+# App-specific ignores
+# ============================================
+
+# Generated data sets
+data/*.json
+data/*.txt
+data/*.csv
+
+# Exported GIF/video (future features)
+exports/
+*.gif
+*.mp4
+
+# Temp visualization files
+tmp/
+cache/
+
+# ============================================
+# Local configs
+# ============================================
+config.local.json
+secrets.json
+.env
+*.env

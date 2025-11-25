@@ -21,6 +21,7 @@ from gui.visualization_canvas import VisualizationCanvas
 from gui.merge_sort_canvas import MergeSortCanvas
 from gui.tree_canvas import TreeCanvas
 from gui.dp_canvas import DPCanvas
+from gui.graph_canvas import GraphCanvas
 
 
 class MainWindow(QMainWindow):
@@ -216,11 +217,15 @@ def example_algorithm(arr):
         self.dp_canvas = DPCanvas()
         self.dp_canvas.setStyleSheet("DPCanvas { background-color: white; border: 2px solid #ccc; }")
 
+        self.graph_canvas = GraphCanvas()
+        self.graph_canvas.setStyleSheet("GraphCanvas { background-color: white; border: 2px solid #ccc; }")
+
         # Add canvases to stack
         self.canvas_stack.addWidget(self.standard_canvas)  # Index 0
         self.canvas_stack.addWidget(self.merge_sort_canvas)  # Index 1
         self.canvas_stack.addWidget(self.tree_canvas)  # Index 2
         self.canvas_stack.addWidget(self.dp_canvas)  # Index 3
+        self.canvas_stack.addWidget(self.graph_canvas)  # Index 4
 
         # Default to standard canvas
         self.canvas = self.standard_canvas
@@ -258,6 +263,9 @@ def example_algorithm(arr):
             elif category == "Dynamic Programming":
                 self.canvas_stack.setCurrentIndex(3)  # DP canvas
                 self.canvas = self.dp_canvas
+            elif category == "Graph Algorithms":
+                self.canvas_stack.setCurrentIndex(4)  # Graph canvas
+                self.canvas = self.graph_canvas
             else:
                 self.canvas_stack.setCurrentIndex(0)  # Standard canvas
                 self.canvas = self.standard_canvas
@@ -288,6 +296,7 @@ def example_algorithm(arr):
         self.merge_sort_canvas.set_array(self.current_array)
         self.tree_canvas.set_array(self.current_array)
         self.dp_canvas.set_array(self.current_array)
+        self.graph_canvas.set_array(self.current_array)
         self.statusBar().showMessage(f"Generated random array of size {size}")
 
     def on_generate_data(self):
@@ -342,6 +351,7 @@ def example_algorithm(arr):
                 self.merge_sort_canvas.set_array(self.current_array)
                 self.tree_canvas.set_array(self.current_array)
                 self.dp_canvas.set_array(self.current_array)
+                self.graph_canvas.set_array(self.current_array)
                 self.statusBar().showMessage(f"Loaded custom array with {len(numbers)} elements")
                 self.on_reset()
 

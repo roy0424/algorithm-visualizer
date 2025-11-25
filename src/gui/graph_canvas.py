@@ -33,6 +33,29 @@ class GraphCanvas(QWidget):
         self.EDGE_PATH = QColor(255, 69, 0)        # Red
         self.TEXT_COLOR = QColor(0, 0, 0)          # Black
 
+    def reset(self):
+        """Reset the canvas to empty state"""
+        self.nodes = []
+        self.edges = []
+        self.node_positions = {}
+        self.visited_nodes = set()
+        self.current_node = None
+        self.highlighted_edges = set()
+        self.path_edges = set()
+        self.distances = {}
+        self.description = ""
+        self.update()
+
+    def set_array(self, arr):
+        """Set array (not used for graph canvas, but needed for interface compatibility)"""
+        # Graph algorithms generate their own graph structure from the array
+        # So we just reset here
+        self.reset()
+
+    def set_state(self, state):
+        """Update visualization state from algorithm generator (main interface)"""
+        self.update_state(state)
+
     def update_state(self, state):
         """Update visualization state from algorithm generator"""
         if state is None:

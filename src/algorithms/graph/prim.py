@@ -112,7 +112,7 @@ def prim(arr, target=None):
 
 def _generate_graph(arr):
     """
-    Generate a weighted graph from an array
+    Generate a tree from an array
 
     Args:
         arr: Input array
@@ -120,46 +120,33 @@ def _generate_graph(arr):
     Returns:
         Tuple of (nodes, edges, adjacency_list)
     """
-    # Get unique nodes (limit to 8 for visualization)
-    nodes = sorted(list(set(arr)))[:8]
+    # Get unique nodes (limit to 10 for visualization)
+    nodes = sorted(list(set(arr)))[:10]
 
     if len(nodes) < 2:
         return nodes, [], {}
 
-    # Generate edges with weights
+    # Generate tree structure
     edges = []
     adj_list = {node: [] for node in nodes}
 
-    # Connect based on original array order
-    for i in range(len(arr) - 1):
-        if arr[i] in nodes and arr[i+1] in nodes:
-            u, v = arr[i], arr[i+1]
-            weight = abs(u - v) % 10 + 1  # Weight between 1-10
+    # Create a balanced tree structure
+    # First node is root, others are added as children in a breadth-first manner
+    root = nodes[0]
 
-            # Add edge (undirected)
-            edge_exists = False
-            for existing_edge in edges:
-                if (existing_edge[0] == u and existing_edge[1] == v) or \
-                   (existing_edge[0] == v and existing_edge[1] == u):
-                    edge_exists = True
-                    break
+    # For each node (except root), connect it to a parent
+    for i in range(1, len(nodes)):
+        # Parent is at index (i-1)//2 (binary tree structure)
+        parent_idx = (i - 1) // 2
+        parent = nodes[parent_idx]
+        child = nodes[i]
 
-            if not edge_exists:
-                edges.append((u, v, weight))
-                adj_list[u].append((v, weight))
-                adj_list[v].append((u, weight))
+        weight = abs(parent - child) % 10 + 1
 
-    # Ensure graph is connected
-    if len(edges) < len(nodes) - 1:
-        for i in range(len(nodes) - 1):
-            u, v = nodes[i], nodes[i+1]
-            weight = abs(u - v) % 10 + 1
-
-            # Check if edge already exists
-            if not any((n, w) for n, w in adj_list[u] if n == v):
-                edges.append((u, v, weight))
-                adj_list[u].append((v, weight))
-                adj_list[v].append((u, weight))
+        # Add edge (undirected for visualization)
+        edges.append((parent, child, weight))
+        adj_list[parent].append((child, weight))
+        adj_list[child].append((parent, weight))
 
     return nodes, edges, adj_list
 

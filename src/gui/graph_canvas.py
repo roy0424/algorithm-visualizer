@@ -12,38 +12,36 @@ class GraphCanvas(QWidget):
 
     def __init__(self):
         super().__init__()
-        self.nodes = []
-        self.edges = []
-        self.node_positions = {}
-        self.visited_nodes = set()
-        self.current_node = None
-        self.highlighted_edges = set()
-        self.path_edges = set()
-        self.distances = {}
+        self.grid = []
+        self.start = None
+        self.end = None
+        self.visited = set()
+        self.current = None
+        self.path = []
         self.description = ""
+        self.stack_queue_state = None  # For DFS/BFS visualization
 
         # Colors
-        self.NODE_DEFAULT = QColor(200, 200, 200)  # Light gray
-        self.NODE_CURRENT = QColor(255, 69, 0)     # Red-orange
-        self.NODE_VISITED = QColor(50, 205, 50)    # Green
-        self.NODE_START = QColor(70, 130, 180)     # Steel blue
-        self.NODE_TARGET = QColor(255, 140, 0)     # Dark orange
-        self.EDGE_DEFAULT = QColor(150, 150, 150)  # Gray
-        self.EDGE_HIGHLIGHT = QColor(255, 215, 0)  # Gold
-        self.EDGE_PATH = QColor(255, 69, 0)        # Red
+        self.CELL_EMPTY = QColor(255, 255, 255)    # White
+        self.CELL_WALL = QColor(40, 40, 40)        # Dark gray
+        self.CELL_START = QColor(70, 130, 180)     # Steel blue
+        self.CELL_END = QColor(220, 20, 60)        # Crimson
+        self.CELL_VISITED = QColor(144, 238, 144)  # Light green
+        self.CELL_CURRENT = QColor(255, 165, 0)    # Orange
+        self.CELL_PATH = QColor(255, 215, 0)       # Gold
+        self.GRID_LINE = QColor(200, 200, 200)     # Light gray
         self.TEXT_COLOR = QColor(0, 0, 0)          # Black
 
     def reset(self):
         """Reset the canvas to empty state"""
-        self.nodes = []
-        self.edges = []
-        self.node_positions = {}
-        self.visited_nodes = set()
-        self.current_node = None
-        self.highlighted_edges = set()
-        self.path_edges = set()
-        self.distances = {}
+        self.grid = []
+        self.start = None
+        self.end = None
+        self.visited = set()
+        self.current = None
+        self.path = []
         self.description = ""
+        self.stack_queue_state = None
         self.update()
 
     def set_array(self, arr):
@@ -61,184 +59,168 @@ class GraphCanvas(QWidget):
         if state is None:
             return
 
-        # Extract graph structure
-        self.nodes = state.get('nodes', [])
-        self.edges = state.get('edges', [])
+        # Extract grid structure
+        self.grid = state.get('grid', [])
+        self.start = state.get('start', None)
+        self.end = state.get('end', None)
 
         # Extract visualization state
-        self.visited_nodes = set(state.get('visited', []))
-        self.current_node = state.get('current_node', None)
-        self.highlighted_edges = set(state.get('highlighted_edges', []))
-        self.path_edges = set(state.get('path_edges', []))
-        self.distances = state.get('distances', {})
+        self.visited = set(state.get('visited', []))
+        self.current = state.get('current', None)
+        self.path = state.get('path', [])
         self.description = state.get('description', '')
 
-        # Calculate node positions (circular layout)
-        self._calculate_positions()
+        # Extract stack/queue state if available
+        self.stack_queue_state = state.get('stack_queue', None)
 
         self.update()
 
-    def _calculate_positions(self):
-        """Calculate node positions in circular layout"""
-        if not self.nodes:
-            return
-
-        width = self.width()
-        height = self.height()
-        center_x = width / 2
-        center_y = height / 2
-
-        # Calculate radius (leave margin)
-        margin = 80
-        radius = min(width, height) / 2 - margin
-
-        n = len(self.nodes)
-        for i, node in enumerate(self.nodes):
-            angle = 2 * math.pi * i / n - math.pi / 2  # Start from top
-            x = center_x + radius * math.cos(angle)
-            y = center_y + radius * math.sin(angle)
-            self.node_positions[node] = (x, y)
-
     def paintEvent(self, event):
-        """Draw the graph"""
+        """Draw the 2D grid"""
         painter = QPainter(self)
         painter.setRenderHint(QPainter.RenderHint.Antialiasing)
 
-        if not self.nodes:
+        if not self.grid:
             self._draw_empty_state(painter)
             return
 
-        # Draw edges first (so nodes appear on top)
-        self._draw_edges(painter)
+        # Draw grid
+        self._draw_grid(painter)
 
-        # Draw nodes
-        self._draw_nodes(painter)
+        # Draw stack/queue state (for DFS/BFS)
+        if self.stack_queue_state:
+            self._draw_stack_queue(painter)
 
         # Draw description
         self._draw_description(painter)
 
-    def _draw_edges(self, painter):
-        """Draw all edges"""
-        for edge in self.edges:
-            if len(edge) == 3:
-                from_node, to_node, weight = edge
-            else:
-                from_node, to_node = edge
-                weight = 1
+    def _draw_grid(self, painter):
+        """Draw the 2D grid"""
+        if not self.grid:
+            return
 
-            if from_node not in self.node_positions or to_node not in self.node_positions:
-                continue
+        rows = len(self.grid)
+        cols = len(self.grid[0]) if rows > 0 else 0
 
-            x1, y1 = self.node_positions[from_node]
-            x2, y2 = self.node_positions[to_node]
+        # Calculate cell size
+        width = self.width()
+        height = self.height() - 80  # Leave space for description
 
-            # Determine edge color and width
-            edge_tuple = (from_node, to_node)
-            reverse_edge = (to_node, from_node)
+        cell_size = min(width // cols, height // rows)
 
-            if edge_tuple in self.path_edges or reverse_edge in self.path_edges:
-                color = self.EDGE_PATH
-                width = 4
-            elif edge_tuple in self.highlighted_edges or reverse_edge in self.highlighted_edges:
-                color = self.EDGE_HIGHLIGHT
-                width = 3
-            else:
-                color = self.EDGE_DEFAULT
-                width = 2
+        # Center the grid
+        grid_width = cols * cell_size
+        grid_height = rows * cell_size
+        offset_x = (width - grid_width) // 2
+        offset_y = (height - grid_height) // 2 + 20
 
-            pen = QPen(color, width)
-            painter.setPen(pen)
-            painter.drawLine(int(x1), int(y1), int(x2), int(y2))
+        # Draw cells
+        for i in range(rows):
+            for j in range(cols):
+                x = offset_x + j * cell_size
+                y = offset_y + i * cell_size
 
-            # Draw weight label
-            mid_x = (x1 + x2) / 2
-            mid_y = (y1 + y2) / 2
+                # Determine cell color
+                cell_pos = (i, j)
+                if cell_pos == self.start:
+                    color = self.CELL_START
+                elif cell_pos == self.end:
+                    color = self.CELL_END
+                elif cell_pos == self.current:
+                    color = self.CELL_CURRENT
+                elif cell_pos in self.path:
+                    color = self.CELL_PATH
+                elif cell_pos in self.visited:
+                    color = self.CELL_VISITED
+                elif self.grid[i][j] == 1:  # Wall
+                    color = self.CELL_WALL
+                else:  # Empty
+                    color = self.CELL_EMPTY
 
-            painter.setFont(QFont('Arial', 9))
-            painter.setPen(QPen(self.TEXT_COLOR))
+                # Draw cell
+                painter.fillRect(x, y, cell_size, cell_size, color)
 
-            # Background for weight text
-            text = str(weight)
-            metrics = painter.fontMetrics()
-            text_width = metrics.horizontalAdvance(text)
-            text_height = metrics.height()
+                # Draw grid lines
+                painter.setPen(QPen(self.GRID_LINE, 1))
+                painter.drawRect(x, y, cell_size, cell_size)
 
-            # Draw white background
-            painter.fillRect(
-                int(mid_x - text_width/2 - 2),
-                int(mid_y - text_height/2),
-                text_width + 4,
-                text_height,
-                QColor(255, 255, 255, 200)
-            )
+    def _draw_stack_queue(self, painter):
+        """Draw stack/queue state visualization"""
+        if not self.stack_queue_state:
+            return
 
+        data_structure_type = self.stack_queue_state.get('type', 'stack')
+        items = self.stack_queue_state.get('items', [])
+
+        # Position in top-right corner
+        box_width = 150
+        box_x = self.width() - box_width - 20
+        box_y = 20
+        item_height = 35
+        padding = 10
+
+        # Draw title
+        painter.setFont(QFont('Arial', 12, QFont.Weight.Bold))
+        painter.setPen(QPen(self.TEXT_COLOR))
+        title = "Stack:" if data_structure_type == 'stack' else "Queue:"
+        painter.drawText(box_x, box_y, title)
+
+        # Draw container box
+        box_y += 25
+        container_height = max(100, len(items) * item_height + padding * 2)
+
+        painter.setPen(QPen(QColor(100, 100, 100), 2))
+        painter.setBrush(QColor(245, 245, 245, 200))
+        painter.drawRect(box_x, box_y, box_width, container_height)
+
+        # Draw items
+        painter.setFont(QFont('Arial', 11))
+
+        if not items:
+            # Empty message
+            painter.setPen(QPen(QColor(150, 150, 150)))
             painter.drawText(
-                int(mid_x - text_width/2),
-                int(mid_y + text_height/3),
-                text
+                box_x + padding,
+                box_y + container_height // 2,
+                "Empty"
             )
+        else:
+            # Draw each item
+            for i, item in enumerate(items):
+                item_y = box_y + padding + i * item_height
 
-    def _draw_nodes(self, painter):
-        """Draw all nodes"""
-        node_radius = 25
+                # Item box
+                painter.setPen(QPen(QColor(70, 130, 180), 2))
+                painter.setBrush(QColor(173, 216, 230))
+                painter.drawRect(
+                    box_x + padding,
+                    item_y,
+                    box_width - padding * 2,
+                    item_height - 5
+                )
 
-        for node in self.nodes:
-            if node not in self.node_positions:
-                continue
-
-            x, y = self.node_positions[node]
-
-            # Determine node color
-            if node == self.current_node:
-                color = self.NODE_CURRENT
-            elif node in self.visited_nodes:
-                color = self.NODE_VISITED
-            elif node == self.nodes[0]:  # Start node
-                color = self.NODE_START
-            else:
-                color = self.NODE_DEFAULT
-
-            # Draw node circle
-            painter.setBrush(color)
-            painter.setPen(QPen(Qt.GlobalColor.black, 2))
-            painter.drawEllipse(
-                int(x - node_radius),
-                int(y - node_radius),
-                node_radius * 2,
-                node_radius * 2
-            )
-
-            # Draw node label
-            painter.setFont(QFont('Arial', 11, QFont.Weight.Bold))
-            painter.setPen(QPen(Qt.GlobalColor.white if node in self.visited_nodes or node == self.current_node else Qt.GlobalColor.black))
-
-            text = str(node)
-            metrics = painter.fontMetrics()
-            text_width = metrics.horizontalAdvance(text)
-            text_height = metrics.height()
-
-            painter.drawText(
-                int(x - text_width/2),
-                int(y + text_height/3),
-                text
-            )
-
-            # Draw distance label (for Dijkstra)
-            if node in self.distances:
-                dist = self.distances[node]
-                dist_text = str(dist) if dist != float('inf') else '∞'
-
-                painter.setFont(QFont('Arial', 9))
-                painter.setPen(QPen(self.TEXT_COLOR))
-
+                # Item text
+                painter.setPen(QPen(QColor(0, 0, 0)))
+                text = str(item)
                 metrics = painter.fontMetrics()
-                text_width = metrics.horizontalAdvance(dist_text)
+                text_width = metrics.horizontalAdvance(text)
+                text_height = metrics.height()
 
                 painter.drawText(
-                    int(x - text_width/2),
-                    int(y + node_radius + 15),
-                    dist_text
+                    box_x + padding + (box_width - padding * 2 - text_width) // 2,
+                    item_y + (item_height - 5 + text_height) // 2,
+                    text
                 )
+
+                # Arrow indicator for stack top or queue front
+                if i == 0:
+                    painter.setPen(QPen(QColor(255, 69, 0), 2))
+                    arrow_text = "← Top" if data_structure_type == 'stack' else "← Front"
+                    painter.drawText(
+                        box_x - 50,
+                        item_y + item_height // 2 + 5,
+                        arrow_text
+                    )
 
     def _draw_description(self, painter):
         """Draw description text"""
@@ -248,10 +230,10 @@ class GraphCanvas(QWidget):
             painter.drawText(10, self.height() - 10, self.description)
 
     def _draw_empty_state(self, painter):
-        """Draw message when no graph is loaded"""
+        """Draw message when no grid is loaded"""
         painter.setPen(QPen(QColor(128, 128, 128)))
         painter.setFont(QFont('Arial', 12))
-        text = "No graph loaded. Generate data to visualize graph algorithms."
+        text = "No grid loaded. Generate data to visualize pathfinding algorithms."
         metrics = painter.fontMetrics()
         text_width = metrics.horizontalAdvance(text)
         painter.drawText(
@@ -259,8 +241,3 @@ class GraphCanvas(QWidget):
             int(self.height()/2),
             text
         )
-
-    def resizeEvent(self, event):
-        """Recalculate positions on resize"""
-        super().resizeEvent(event)
-        self._calculate_positions()

@@ -1,18 +1,18 @@
 """
-Graph Depth-First Search (DFS)
+2D Grid Depth-First Search (DFS) - Pathfinding
 """
 
 
 def graph_dfs(arr, target=None):
     """
-    Depth-First Search on a graph
+    Depth-First Search on a 2D grid (pathfinding)
 
-    Time Complexity: O(V + E)
-    Space Complexity: O(V)
+    Time Complexity: O(rows * cols)
+    Space Complexity: O(rows * cols)
 
     Args:
-        arr: Array to generate graph from
-        target: Target node to search for (optional)
+        arr: Array to generate grid from
+        target: Not used (for consistency)
 
     Yields:
         Dictionary containing visualization state
@@ -20,31 +20,30 @@ def graph_dfs(arr, target=None):
     if not arr:
         return
 
-    # Generate graph from array
-    nodes, edges, adj_list = _generate_graph(arr)
+    # Generate 2D grid from array
+    grid, start, end = _generate_grid(arr)
 
-    if not nodes:
-        return
-
-    start_node = nodes[0]
+    rows = len(grid)
+    cols = len(grid[0]) if rows > 0 else 0
 
     # Initial state
     yield {
         'action': 'start',
-        'nodes': nodes,
-        'edges': edges,
+        'grid': grid,
+        'start': start,
+        'end': end,
         'visited': [],
-        'current_node': None,
-        'highlighted_edges': [],
-        'path_edges': [],
-        'description': f'Starting DFS from node {start_node}',
+        'current': None,
+        'path': [],
+        'stack_queue': {'type': 'stack', 'items': [start]},
+        'description': f'Starting DFS from {start} to find {end}',
         'line': 0
     }
 
     # DFS using stack
-    stack = [start_node]
+    stack = [start]
     visited = set()
-    visited_order = []
+    parent = {}
 
     while stack:
         # Pop from stack
@@ -55,98 +54,210 @@ def graph_dfs(arr, target=None):
 
         # Mark as visited
         visited.add(current)
-        visited_order.append(current)
 
-        # Show current node being visited
+        # Show current cell being visited
         yield {
             'action': 'visit',
-            'nodes': nodes,
-            'edges': edges,
+            'grid': grid,
+            'start': start,
+            'end': end,
             'visited': list(visited),
-            'current_node': current,
-            'highlighted_edges': [],
-            'path_edges': [],
-            'description': f'Visiting node {current} (Stack: {stack})',
+            'current': current,
+            'path': [],
+            'stack_queue': {'type': 'stack', 'items': stack.copy()},
+            'description': f'Visiting cell {current}',
             'line': 1
         }
 
-        # Explore neighbors
-        neighbors = sorted(adj_list.get(current, []), reverse=True)  # Reverse for stack order
+        # Check if we reached the end
+        if current == end:
+            # Reconstruct path
+            path = []
+            node = end
+            while node in parent:
+                path.append(node)
+                node = parent[node]
+            path.append(start)
+            path.reverse()
 
-        for neighbor in neighbors:
-            if neighbor not in visited:
-                # Highlight edge being explored
+            yield {
+                'action': 'found',
+                'grid': grid,
+                'start': start,
+                'end': end,
+                'visited': list(visited),
+                'current': end,
+                'path': path,
+                'stack_queue': {'type': 'stack', 'items': []},
+                'description': f'Path found! Length: {len(path)}',
+                'line': 3
+            }
+            return
+
+        # Explore neighbors (up, right, down, left)
+        row, col = current
+        directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+
+        for dr, dc in directions:
+            new_row, new_col = row + dr, col + dc
+            neighbor = (new_row, new_col)
+
+            # Check bounds and obstacles
+            if (0 <= new_row < rows and 0 <= new_col < cols and
+                grid[new_row][new_col] != 1 and neighbor not in visited):
+
+                parent[neighbor] = current
+                stack.append(neighbor)
+
+                # Highlight neighbor being explored
                 yield {
                     'action': 'explore',
-                    'nodes': nodes,
-                    'edges': edges,
+                    'grid': grid,
+                    'start': start,
+                    'end': end,
                     'visited': list(visited),
-                    'current_node': current,
-                    'highlighted_edges': [(current, neighbor)],
-                    'path_edges': [],
-                    'description': f'Exploring edge ({current}, {neighbor})',
+                    'current': current,
+                    'path': [],
+                    'stack_queue': {'type': 'stack', 'items': stack.copy()},
+                    'description': f'Exploring neighbor {neighbor}',
                     'line': 2
                 }
 
-                stack.append(neighbor)
-
-    # Done
+    # No path found
     yield {
         'action': 'done',
-        'nodes': nodes,
-        'edges': edges,
+        'grid': grid,
+        'start': start,
+        'end': end,
         'visited': list(visited),
-        'current_node': None,
-        'highlighted_edges': [],
-        'path_edges': [],
-        'description': f'DFS complete. Visited order: {visited_order}',
+        'current': None,
+        'path': [],
+        'stack_queue': {'type': 'stack', 'items': []},
+        'description': 'DFS complete. No path found!',
         'line': 4
     }
 
 
-def _generate_graph(arr):
+def _generate_grid(arr):
     """
-    Generate a graph from an array
+    Generate a maze with multiple paths using DFS + wall removal
 
     Args:
-        arr: Input array
+        arr: Input array (first element is grid size)
 
     Returns:
-        Tuple of (nodes, edges, adjacency_list)
+        Tuple of (grid, start, end)
+        grid: 2D list where 0 = empty, 1 = wall
+        start: (row, col) tuple for starting position
+        end: (row, col) tuple for ending position
     """
-    # Get unique nodes (limit to 8 for visualization)
-    nodes = sorted(list(set(arr)))[:8]
+    import random
+    from collections import deque
 
-    if len(nodes) < 2:
-        return nodes, [], {}
+    # Extract size from array
+    size = arr[0] if arr and arr[0] > 0 else 15
 
-    # Generate edges (connect consecutive elements in original array)
-    edges = []
-    adj_list = {node: [] for node in nodes}
+    rows = size
+    cols = size
 
-    # Connect based on original array order
-    for i in range(len(arr) - 1):
-        if arr[i] in nodes and arr[i+1] in nodes:
-            u, v = arr[i], arr[i+1]
-            weight = abs(u - v)
+    # Initialize grid with all walls
+    grid = [[1 for _ in range(cols)] for _ in range(rows)]
 
-            # Add edge (undirected)
-            if (u, v, weight) not in edges and (v, u, weight) not in edges:
-                edges.append((u, v, weight))
-                adj_list[u].append(v)
-                adj_list[v].append(u)
+    # Seed for consistent maze generation
+    random.seed(42)
 
-    # Ensure graph is connected by adding extra edges if needed
-    if len(edges) < len(nodes) - 1:
-        for i in range(len(nodes) - 1):
-            u, v = nodes[i], nodes[i+1]
-            weight = abs(u - v)
-            if v not in adj_list[u]:
-                edges.append((u, v, weight))
-                adj_list[u].append(v)
-                adj_list[v].append(u)
+    # Maze generation using DFS (creates perfect maze with one path)
+    def carve_passages_from(cx, cy, grid):
+        """Carve passages from (cx, cy) using DFS"""
+        directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+        random.shuffle(directions)
 
-    return nodes, edges, adj_list
+        for dx, dy in directions:
+            nx, ny = cx + dx * 2, cy + dy * 2
+
+            if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 1:
+                grid[cx + dx][cy + dy] = 0
+                grid[nx][ny] = 0
+                carve_passages_from(nx, ny, grid)
+
+    # Start carving from (1, 1)
+    start = (1, 1)
+    grid[start[0]][start[1]] = 0
+    carve_passages_from(start[0], start[1], grid)
+
+    # Set end point
+    end = (rows - 2, cols - 2)
+    grid[end[0]][end[1]] = 0
+
+    # Make borders walls
+    for i in range(rows):
+        grid[i][0] = 1
+        grid[i][cols - 1] = 1
+    for j in range(cols):
+        grid[0][j] = 1
+        grid[rows - 1][j] = 1
+
+    # Remove additional walls to create multiple paths (15-20% of existing walls)
+    wall_cells = []
+    for i in range(2, rows-2):
+        for j in range(2, cols-2):
+            if grid[i][j] == 1:
+                # Check if this wall is between two paths
+                neighbors_path = 0
+                for di, dj in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                    ni, nj = i + di, j + dj
+                    if 0 <= ni < rows and 0 <= nj < cols and grid[ni][nj] == 0:
+                        neighbors_path += 1
+
+                # Only remove walls that are between paths (creates loops)
+                if neighbors_path >= 2:
+                    wall_cells.append((i, j))
+
+    # Remove 15-20% of removable walls to create multiple paths
+    num_to_remove = int(len(wall_cells) * 0.18)
+    random.shuffle(wall_cells)
+    for i in range(min(num_to_remove, len(wall_cells))):
+        r, c = wall_cells[i]
+        grid[r][c] = 0
+
+    # Verify path exists using BFS
+    def has_path(grid, start, end):
+        """Check if path exists from start to end"""
+        rows, cols = len(grid), len(grid[0])
+        queue = deque([start])
+        visited = {start}
+
+        while queue:
+            r, c = queue.popleft()
+            if (r, c) == end:
+                return True
+
+            for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+                nr, nc = r + dr, c + dc
+                if (0 <= nr < rows and 0 <= nc < cols and
+                    grid[nr][nc] == 0 and (nr, nc) not in visited):
+                    visited.add((nr, nc))
+                    queue.append((nr, nc))
+
+        return False
+
+    # Ensure path exists - if not, carve a direct path
+    if not has_path(grid, start, end):
+        # Simple carve from start to end
+        r, c = start
+        while (r, c) != end:
+            grid[r][c] = 0
+            if r < end[0]:
+                r += 1
+            elif c < end[1]:
+                c += 1
+            grid[r][c] = 0
+
+    # Final check: ensure start and end are clear
+    grid[start[0]][start[1]] = 0
+    grid[end[0]][end[1]] = 0
+
+    return grid, start, end
 
 
 def get_algorithm_info():

@@ -119,6 +119,21 @@ def bubble_sort(arr):
 ✅ **Searching Algorithms**
 - Linear Search
 - Binary Search (automatically sorts array first)
+- DFS (Depth-First Search with tree visualization)
+- BFS (Breadth-First Search with tree visualization)
+
+✅ **Graph Algorithms**
+- Graph DFS (Depth-First Search on graphs)
+- Graph BFS (Breadth-First Search on graphs)
+- Dijkstra's Algorithm (shortest path)
+- Prim's Algorithm (Minimum Spanning Tree)
+- Kruskal's Algorithm (Minimum Spanning Tree with Union-Find)
+
+✅ **Dynamic Programming**
+- Fibonacci (with memoization table visualization)
+- Knapsack Problem (0/1 knapsack with DP table)
+- Longest Common Subsequence (LCS with DP table)
+- Coin Change (minimum coins with DP table)
 
 ✅ **Visualization Canvas**
 - Bar chart visualization with color coding
@@ -143,21 +158,23 @@ def bubble_sort(arr):
 ✅ **Multi-Canvas Architecture**
 - QStackedWidget manages multiple visualization types
 - Automatic canvas switching based on selected algorithm
-- Currently: StandardCanvas (바 차트) and MergeSortCanvas (분할/병합 시각화)
+- StandardCanvas: 바 차트 시각화 (정렬/탐색 알고리즘)
+- MergeSortCanvas: 분할/병합 과정 시각화 (Merge Sort)
+- TreeCanvas: 트리 구조 시각화 (DFS/BFS)
+- DPCanvas: 동적 프로그래밍 테이블 시각화
+- GraphCanvas: 그래프 노드/엣지 시각화 (그래프 알고리즘)
 
 ## Future Development Tasks
 
 **High Priority:**
-- DFS/BFS visualization with tree/graph structure
 - Heap Sort algorithm
-- Graph visualization canvas (nodes and edges)
 - Performance metrics tracking (comparisons, swaps count)
+- More graph algorithms (Bellman-Ford, Floyd-Warshall, Topological Sort)
 
 **Medium Priority:**
-- Graph algorithms (Dijkstra, Kruskal, Prim, Bellman-Ford)
-- Dynamic Programming visualizations
 - Export visualization as GIF/video
 - Save/Load custom datasets
+- More DP algorithms (Edit Distance, Matrix Chain Multiplication)
 
 **Low Priority:**
 - Dark mode theme

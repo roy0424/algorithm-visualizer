@@ -40,6 +40,7 @@ class MainWindow(QMainWindow):
         # Animation control
         self.timer = QTimer()
         self.timer.timeout.connect(self.execute_step)
+
         self.animation_delay = 500  # milliseconds
 
         self.setup_ui()
@@ -102,12 +103,23 @@ class MainWindow(QMainWindow):
 
         layout.addSpacing(30)
 
-        # Data generation button
+        # Grid size selector (for graph algorithms)
+        self.grid_size_label = QLabel("Grid Size:")
+        layout.addWidget(self.grid_size_label)
+        self.grid_size_combo = QComboBox()
+        self.grid_size_combo.addItems(["10x10", "15x15", "20x20", "30x30", "40x40", "50x50", "100x100"])
+        self.grid_size_combo.setCurrentIndex(1)  # Default to 15x15
+        self.grid_size_combo.currentTextChanged.connect(self.on_grid_size_changed)
+        layout.addWidget(self.grid_size_combo)
+        self.grid_size_label.hide()
+        self.grid_size_combo.hide()
+
+        # Data generation button (for non-graph algorithms)
         self.generate_button = QPushButton("Random Data")
         self.generate_button.clicked.connect(self.on_generate_data)
         layout.addWidget(self.generate_button)
 
-        # Custom input button
+        # Custom input button (for non-graph algorithms)
         self.input_button = QPushButton("Custom Input")
         self.input_button.clicked.connect(self.on_custom_input)
         layout.addWidget(self.input_button)
@@ -249,6 +261,18 @@ def example_algorithm(arr):
         category = self.category_combo.currentText()
         algo_func, algo_info = get_algorithm(category, algorithm_name)
 
+        # Show/hide UI elements based on category
+        if category == "Graph Algorithms":
+            self.grid_size_label.show()
+            self.grid_size_combo.show()
+            self.generate_button.hide()
+            self.input_button.hide()
+        else:
+            self.grid_size_label.hide()
+            self.grid_size_combo.hide()
+            self.generate_button.show()
+            self.input_button.show()
+
         if algo_func and algo_info:
             self.current_algorithm = algo_func
             self.algorithm_info = algo_info
@@ -274,6 +298,10 @@ def example_algorithm(arr):
             self.canvas.reset()
             self.canvas.set_array(self.current_array)
 
+            # Initialize graph preview for graph algorithms
+            if category == "Graph Algorithms" and self.current_array:
+                self._initialize_graph_preview()
+
             # Update code editor
             self.code_editor.setText(algo_info['code'])
 
@@ -297,6 +325,12 @@ def example_algorithm(arr):
         self.tree_canvas.set_array(self.current_array)
         self.dp_canvas.set_array(self.current_array)
         self.graph_canvas.set_array(self.current_array)
+
+        # Update graph preview if in graph algorithms category
+        category = self.category_combo.currentText()
+        if category == "Graph Algorithms" and self.current_algorithm:
+            self._initialize_graph_preview()
+
         self.statusBar().showMessage(f"Generated random array of size {size}")
 
     def on_generate_data(self):
@@ -352,6 +386,12 @@ def example_algorithm(arr):
                 self.tree_canvas.set_array(self.current_array)
                 self.dp_canvas.set_array(self.current_array)
                 self.graph_canvas.set_array(self.current_array)
+
+                # Update graph preview if in graph algorithms category
+                category = self.category_combo.currentText()
+                if category == "Graph Algorithms" and self.current_algorithm:
+                    self._initialize_graph_preview()
+
                 self.statusBar().showMessage(f"Loaded custom array with {len(numbers)} elements")
                 self.on_reset()
 
@@ -404,6 +444,22 @@ def example_algorithm(arr):
 
         # Execute one step
         self.execute_step()
+
+    def _initialize_graph_preview(self):
+        """Initialize graph visualization preview without running the algorithm"""
+        if not self.current_algorithm:
+            return
+
+        try:
+            # Create a temporary generator to get the first state
+            temp_gen = self.current_algorithm(self.current_array.copy())
+            first_state = next(temp_gen)
+
+            # Display the initial graph structure
+            self.canvas.set_state(first_state)
+        except (StopIteration, Exception):
+            # If there's an error, just reset
+            self.canvas.reset()
 
     def _initialize_algorithm(self):
         """Helper to initialize algorithm with parameters"""
@@ -531,6 +587,20 @@ def example_algorithm(arr):
         self.input_button.setEnabled(True)
 
         self.statusBar().showMessage("Reset")
+
+    def on_grid_size_changed(self, size_text):
+        """Handle grid size change for graph algorithms"""
+        # Extract size from text (e.g., "15x15" -> 15)
+        size = int(size_text.split('x')[0])
+
+        # Update current array with size marker
+        self.current_array = [size]  # Use size as array content
+
+        # Reinitialize graph preview
+        category = self.category_combo.currentText()
+        if category == "Graph Algorithms" and self.current_algorithm:
+            self._initialize_graph_preview()
+            self.statusBar().showMessage(f"Grid size changed to {size_text}")
 
     def on_speed_changed(self, value):
         """Handle speed slider change"""

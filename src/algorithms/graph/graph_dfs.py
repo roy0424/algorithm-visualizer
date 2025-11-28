@@ -166,24 +166,37 @@ def _generate_grid(arr):
     # Seed for consistent maze generation
     random.seed(42)
 
-    # Maze generation using DFS (creates perfect maze with one path)
-    def carve_passages_from(cx, cy, grid):
-        """Carve passages from (cx, cy) using DFS"""
-        directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
-        random.shuffle(directions)
+    # Maze generation using iterative DFS (avoids recursion limit for large grids)
+    def carve_passages_iterative(start_x, start_y, grid):
+        """Carve passages from (start_x, start_y) using iterative DFS"""
+        stack = [(start_x, start_y)]
 
-        for dx, dy in directions:
-            nx, ny = cx + dx * 2, cy + dy * 2
+        while stack:
+            cx, cy = stack[-1]  # Peek at top
 
-            if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 1:
-                grid[cx + dx][cy + dy] = 0
-                grid[nx][ny] = 0
-                carve_passages_from(nx, ny, grid)
+            # Get available directions
+            directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+            random.shuffle(directions)
+
+            found_unvisited = False
+            for dx, dy in directions:
+                nx, ny = cx + dx * 2, cy + dy * 2
+
+                if 0 <= nx < rows and 0 <= ny < cols and grid[nx][ny] == 1:
+                    # Carve passage
+                    grid[cx + dx][cy + dy] = 0
+                    grid[nx][ny] = 0
+                    stack.append((nx, ny))
+                    found_unvisited = True
+                    break
+
+            if not found_unvisited:
+                stack.pop()  # Backtrack
 
     # Start carving from (1, 1)
     start = (1, 1)
     grid[start[0]][start[1]] = 0
-    carve_passages_from(start[0], start[1], grid)
+    carve_passages_iterative(start[0], start[1], grid)
 
     # Set end point
     end = (rows - 2, cols - 2)

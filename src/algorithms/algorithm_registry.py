@@ -17,7 +17,8 @@ from algorithms.dp.lcs import lcs, get_algorithm_info as lcs_info
 from algorithms.dp.coin_change import coin_change, get_algorithm_info as coin_info
 from algorithms.graph.graph_dfs import graph_dfs, get_algorithm_info as graph_dfs_info
 from algorithms.graph.graph_bfs import graph_bfs, get_algorithm_info as graph_bfs_info
-from algorithms.graph.dijkstra import dijkstra, get_algorithm_info as dijkstra_info
+from algorithms.graph.dijkstra_weighted import dijkstra_weighted, get_algorithm_info as dijkstra_weighted_info
+from algorithms.graph.astar_weighted import astar_weighted, get_algorithm_info as astar_weighted_info
 from algorithms.graph.prim import prim, get_algorithm_info as prim_info
 from algorithms.graph.kruskal import kruskal, get_algorithm_info as kruskal_info
 
@@ -96,8 +97,12 @@ ALGORITHMS = {
             'info': graph_bfs_info()
         },
         "Dijkstra's Algorithm": {
-            'function': dijkstra,
-            'info': dijkstra_info()
+            'function': dijkstra_weighted,
+            'info': dijkstra_weighted_info()
+        },
+        "A* Algorithm": {
+            'function': astar_weighted,
+            'info': astar_weighted_info()
         },
         "Prim's Algorithm": {
             'function': prim,

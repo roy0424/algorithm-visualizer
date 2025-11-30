@@ -22,6 +22,7 @@ from gui.merge_sort_canvas import MergeSortCanvas
 from gui.tree_canvas import TreeCanvas
 from gui.dp_canvas import DPCanvas
 from gui.graph_canvas import GraphCanvas
+from gui.grid_pathfinding_canvas import GridPathfindingCanvas
 
 
 class MainWindow(QMainWindow):
@@ -232,12 +233,16 @@ def example_algorithm(arr):
         self.graph_canvas = GraphCanvas()
         self.graph_canvas.setStyleSheet("GraphCanvas { background-color: white; border: 2px solid #ccc; }")
 
+        self.grid_pathfinding_canvas = GridPathfindingCanvas()
+        self.grid_pathfinding_canvas.setStyleSheet("GridPathfindingCanvas { background-color: white; border: 2px solid #ccc; }")
+
         # Add canvases to stack
         self.canvas_stack.addWidget(self.standard_canvas)  # Index 0
         self.canvas_stack.addWidget(self.merge_sort_canvas)  # Index 1
         self.canvas_stack.addWidget(self.tree_canvas)  # Index 2
         self.canvas_stack.addWidget(self.dp_canvas)  # Index 3
         self.canvas_stack.addWidget(self.graph_canvas)  # Index 4
+        self.canvas_stack.addWidget(self.grid_pathfinding_canvas)  # Index 5
 
         # Default to standard canvas
         self.canvas = self.standard_canvas
@@ -288,7 +293,7 @@ def example_algorithm(arr):
                 self.canvas_stack.setCurrentIndex(3)  # DP canvas
                 self.canvas = self.dp_canvas
             elif category == "Graph Algorithms":
-                self.canvas_stack.setCurrentIndex(4)  # Graph canvas
+                self.canvas_stack.setCurrentIndex(4)  # Graph canvas (for all graph algorithms)
                 self.canvas = self.graph_canvas
             else:
                 self.canvas_stack.setCurrentIndex(0)  # Standard canvas
@@ -325,6 +330,7 @@ def example_algorithm(arr):
         self.tree_canvas.set_array(self.current_array)
         self.dp_canvas.set_array(self.current_array)
         self.graph_canvas.set_array(self.current_array)
+        self.grid_pathfinding_canvas.set_array(self.current_array)
 
         # Update graph preview if in graph algorithms category
         category = self.category_combo.currentText()
@@ -386,6 +392,7 @@ def example_algorithm(arr):
                 self.tree_canvas.set_array(self.current_array)
                 self.dp_canvas.set_array(self.current_array)
                 self.graph_canvas.set_array(self.current_array)
+                self.grid_pathfinding_canvas.set_array(self.current_array)
 
                 # Update graph preview if in graph algorithms category
                 category = self.category_combo.currentText()

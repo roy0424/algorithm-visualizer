@@ -46,16 +46,52 @@ def graph_dfs(arr, target=None):
     parent = {}
 
     while stack:
-        # Pop from stack
+        # Loop start
+        yield {
+            'action': 'loop',
+            'grid': grid,
+            'start': start,
+            'end': end,
+            'visited': list(visited),
+            'current': None,
+            'path': [],
+            'stack_queue': {'type': 'stack', 'items': stack.copy()},
+            'description': 'DFS iteration',
+            'line': 4  # while stack:
+        }
+
         current = stack.pop()
 
+        yield {
+            'action': 'pop',
+            'grid': grid,
+            'start': start,
+            'end': end,
+            'visited': list(visited),
+            'current': current,
+            'path': [],
+            'stack_queue': {'type': 'stack', 'items': stack.copy()},
+            'description': f'Pop {current} from stack',
+            'line': 5  # node = stack.pop()
+        }
+
         if current in visited:
+            yield {
+                'action': 'skip',
+                'grid': grid,
+                'start': start,
+                'end': end,
+                'visited': list(visited),
+                'current': current,
+                'path': [],
+                'stack_queue': {'type': 'stack', 'items': stack.copy()},
+                'description': f'{current} already visited, skipping',
+                'line': 6
+            }
             continue
 
-        # Mark as visited
         visited.add(current)
 
-        # Show current cell being visited
         yield {
             'action': 'visit',
             'grid': grid,
@@ -66,12 +102,10 @@ def graph_dfs(arr, target=None):
             'path': [],
             'stack_queue': {'type': 'stack', 'items': stack.copy()},
             'description': f'Visiting cell {current}',
-            'line': 1
+            'line': 7  # visited.add(node)
         }
 
-        # Check if we reached the end
         if current == end:
-            # Reconstruct path
             path = []
             node = end
             while node in parent:
@@ -90,26 +124,36 @@ def graph_dfs(arr, target=None):
                 'path': path,
                 'stack_queue': {'type': 'stack', 'items': []},
                 'description': f'Path found! Length: {len(path)}',
-                'line': 3
+                'line': 11  # return visited
             }
             return
 
-        # Explore neighbors (up, right, down, left)
         row, col = current
         directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
+
+        yield {
+            'action': 'neighbors',
+            'grid': grid,
+            'start': start,
+            'end': end,
+            'visited': list(visited),
+            'current': current,
+            'path': [],
+            'stack_queue': {'type': 'stack', 'items': stack.copy()},
+            'description': 'Exploring neighbors',
+            'line': 8  # for neighbor in graph[node]
+        }
 
         for dr, dc in directions:
             new_row, new_col = row + dr, col + dc
             neighbor = (new_row, new_col)
 
-            # Check bounds and obstacles
             if (0 <= new_row < rows and 0 <= new_col < cols and
                 grid[new_row][new_col] != 1 and neighbor not in visited):
 
                 parent[neighbor] = current
                 stack.append(neighbor)
 
-                # Highlight neighbor being explored
                 yield {
                     'action': 'explore',
                     'grid': grid,
@@ -120,7 +164,7 @@ def graph_dfs(arr, target=None):
                     'path': [],
                     'stack_queue': {'type': 'stack', 'items': stack.copy()},
                     'description': f'Exploring neighbor {neighbor}',
-                    'line': 2
+                    'line': 9  # stack.append(neighbor)
                 }
 
     # No path found

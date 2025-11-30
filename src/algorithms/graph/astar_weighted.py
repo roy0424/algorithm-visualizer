@@ -11,36 +11,23 @@ def astar_weighted(arr, target=None):
 
     Time Complexity: O((V + E) log V)
     Space Complexity: O(V)
-
-    Args:
-        arr: Array to generate graph from
-        target: Not used, but kept for interface compatibility
-
-    Yields:
-        Dictionary containing visualization state
     """
     if not arr:
         return
 
-    # Generate weighted graph (same as Dijkstra)
-    nodes, edges, adj_list, start, goal = _generate_weighted_graph(arr)
-
+    nodes, edges, adj_list, start, goal, node_scale = _generate_weighted_graph(arr)
     if not nodes:
         return
 
-    # Initialize g_score (actual cost from start)
     g_score = {node: float('inf') for node in nodes}
     g_score[start] = 0
 
-    # Initialize f_score (g_score + heuristic)
     f_score = {node: float('inf') for node in nodes}
     f_score[start] = _heuristic(start, goal, nodes)
 
-    # Priority queue: (f_score, node)
     pq = [(f_score[start], start)]
     visited = set()
     parent = {}
-    path_edges = set()
 
     # Initial state
     yield {
@@ -55,22 +42,167 @@ def astar_weighted(arr, target=None):
         'path': [],
         'description': f"A*: Starting from node {start} to {goal} (with heuristic)",
         'stats': {'nodes_visited': 0, 'path_length': 0, 'steps': 0, 'total_cost': 0},
+        'node_scale': node_scale,
         'step': 0,
-        'line': 0
+        'line': 0  # def astar...
     }
 
     step = 0
 
     while pq:
+        yield {
+            'action': 'loop',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': None,
+            'highlighted_edges': [],
+            'path': [],
+            'description': "A*: Next iteration",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': 0
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 8  # while pq:
+        }
+
         current_f, current = heapq.heappop(pq)
 
+        yield {
+            'action': 'pop',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': current,
+            'highlighted_edges': [],
+            'path': [],
+            'description': f"A*: Pop {current} with f={current_f:.1f}",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': 0
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 9  # heapq.heappop(pq)
+        }
+
+        yield {
+            'action': 'check_visit',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': current,
+            'highlighted_edges': [],
+            'path': [],
+            'description': f"A*: Checking if {current} already visited",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': 0
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 10  # if node in visited
+        }
+
         if current in visited:
+            yield {
+                'action': 'skip_visited',
+                'nodes': nodes,
+                'edges': edges,
+                'start': start,
+                'end': goal,
+                'visited': list(visited),
+                'current': current,
+                'highlighted_edges': [],
+                'path': [],
+                'description': f"A*: {current} already visited, skipping",
+                'stats': {
+                    'nodes_visited': len(visited),
+                    'path_length': 0,
+                    'steps': step,
+                    'total_cost': 0
+                },
+                'node_scale': node_scale,
+                'step': step,
+                'line': 11  # continue
+            }
             continue
+
+        yield {
+            'action': 'check_goal',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': current,
+            'highlighted_edges': [],
+            'path': [],
+            'description': f"A*: Is {current} the goal?",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': 0
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 12  # if node == goal
+        }
+
+        if current == goal:
+            path = []
+            node = goal
+            while node in parent:
+                path.append(node)
+                node = parent[node]
+            path.append(start)
+            path.reverse()
+
+            path_edges = []
+            for i in range(len(path) - 1):
+                path_edges.append((path[i], path[i+1]))
+
+            yield {
+                'action': 'done',
+                'nodes': nodes,
+                'edges': edges,
+                'start': start,
+                'end': goal,
+                'visited': list(visited),
+                'current': goal,
+                'highlighted_edges': path_edges,
+                'path': path,
+                'description': f"A*: Goal reached! Cost: {int(g_score[goal])}, Nodes visited: {len(visited)} ⭐",
+                'stats': {
+                    'nodes_visited': len(visited),
+                    'path_length': int(g_score[goal]),
+                    'steps': step,
+                    'total_cost': int(g_score[goal])
+                },
+                'node_scale': node_scale,
+                'step': step,
+                'line': 12
+            }
+            return
 
         visited.add(current)
         step += 1
 
-        # Show current node being processed
         h_value = _heuristic(current, goal, nodes)
         g_value = g_score[current]
 
@@ -91,56 +223,62 @@ def astar_weighted(arr, target=None):
                 'steps': step,
                 'total_cost': int(g_value)
             },
+            'node_scale': node_scale,
             'step': step,
-            'line': 1
+            'line': 14  # visited.add(node)
         }
 
-        # Check if we reached the goal
-        if current == goal:
-            # Reconstruct path
-            path = []
-            node = goal
-            while node in parent:
-                path.append(node)
-                node = parent[node]
-            path.append(start)
-            path.reverse()
+        yield {
+            'action': 'neighbors',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': current,
+            'highlighted_edges': [],
+            'path': [],
+            'description': f"A*: Exploring neighbors of {current}",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': 0
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 16  # for neighbor
+        }
 
-            # Calculate path edges
-            path_edges = []
-            for i in range(len(path) - 1):
-                path_edges.append((path[i], path[i+1]))
-
-            yield {
-                'action': 'done',
-                'nodes': nodes,
-                'edges': edges,
-                'start': start,
-                'end': goal,
-                'visited': list(visited),
-                'current': goal,
-                'highlighted_edges': path_edges,
-                'path': path,
-                'description': f"A*: Goal reached! Cost: {int(g_score[goal])}, Nodes visited: {len(visited)} ⭐",
-                'stats': {
-                    'nodes_visited': len(visited),
-                    'path_length': len(path),
-                    'steps': step,
-                    'total_cost': int(g_score[goal])
-                },
-                'step': step,
-                'line': 5
-            }
-            return
-
-        # Check neighbors
         for neighbor, weight in adj_list.get(current, []):
             if neighbor in visited:
                 continue
 
             tentative_g = g_score[current] + weight
 
-            # Highlight edge being considered
+            h_temp = _heuristic(neighbor, goal, nodes)
+            yield {
+                'action': 'compute',
+                'nodes': nodes,
+                'edges': edges,
+                'start': start,
+                'end': goal,
+                'visited': list(visited),
+                'current': current,
+                'highlighted_edges': [(current, neighbor)],
+                'path': [],
+                'description': f"A*: Compute g for {neighbor}: {g_score[current]:.0f} + {weight} = {tentative_g:.0f}, h={h_temp:.0f}",
+                'stats': {
+                    'nodes_visited': len(visited),
+                    'path_length': 0,
+                    'steps': step,
+                    'total_cost': 0
+                },
+                'node_scale': node_scale,
+                'step': step,
+                'line': 17  # tentative_g calculation
+            }
+
             h = _heuristic(neighbor, goal, nodes)
             yield {
                 'action': 'relax',
@@ -159,17 +297,106 @@ def astar_weighted(arr, target=None):
                     'steps': step,
                     'total_cost': 0
                 },
+                'node_scale': node_scale,
                 'step': step,
-                'line': 2
+                'line': 16  # for neighbor, weight in graph[node]
             }
 
-            # Update if better path found
+            yield {
+                'action': 'check_better',
+                'nodes': nodes,
+                'edges': edges,
+                'start': start,
+                'end': goal,
+                'visited': list(visited),
+                'current': current,
+                'highlighted_edges': [(current, neighbor)],
+                'path': [],
+                'description': f"A*: Is {tentative_g:.0f} < g({neighbor})?",
+                'stats': {
+                    'nodes_visited': len(visited),
+                    'path_length': 0,
+                    'steps': step,
+                    'total_cost': 0
+                },
+                'node_scale': node_scale,
+                'step': step,
+                'line': 18  # if tentative_g < g_score[neighbor]
+            }
+
             if tentative_g < g_score[neighbor]:
+                yield {
+                    'action': 'compare_update',
+                    'nodes': nodes,
+                    'edges': edges,
+                    'start': start,
+                    'end': goal,
+                    'visited': list(visited),
+                    'current': current,
+                    'highlighted_edges': [(current, neighbor)],
+                    'path': [],
+                    'description': f"A*: Updating {neighbor} with g={tentative_g:.0f}, f={tentative_g + h:.0f}",
+                    'stats': {
+                        'nodes_visited': len(visited),
+                        'path_length': 0,
+                        'steps': step,
+                        'total_cost': 0
+                    },
+                    'node_scale': node_scale,
+                    'step': step,
+                    'line': 19  # g_score update block
+                }
+
                 g_score[neighbor] = tentative_g
                 h = _heuristic(neighbor, goal, nodes)
                 f_score[neighbor] = tentative_g + h
                 parent[neighbor] = current
+
+                yield {
+                    'action': 'update_scores',
+                    'nodes': nodes,
+                    'edges': edges,
+                    'start': start,
+                    'end': goal,
+                    'visited': list(visited),
+                    'current': current,
+                    'highlighted_edges': [(current, neighbor)],
+                    'path': [],
+                    'description': f"A*: Set g({neighbor})={tentative_g:.0f}, f={f_score[neighbor]:.0f}",
+                    'stats': {
+                        'nodes_visited': len(visited),
+                        'path_length': 0,
+                        'steps': step,
+                        'total_cost': 0
+                    },
+                    'node_scale': node_scale,
+                    'step': step,
+                    'line': 20  # f_score update
+                }
+
                 heapq.heappush(pq, (f_score[neighbor], neighbor))
+
+                yield {
+                    'action': 'push_queue',
+                    'nodes': nodes,
+                    'edges': edges,
+                    'start': start,
+                    'end': goal,
+                    'visited': list(visited),
+                    'current': current,
+                    'highlighted_edges': [(current, neighbor)],
+                    'path': [],
+                    'description': f"A*: Push {neighbor} with f={f_score[neighbor]:.0f} to queue",
+                    'stats': {
+                        'nodes_visited': len(visited),
+                        'path_length': 0,
+                        'steps': step,
+                        'total_cost': 0
+                    },
+                    'node_scale': node_scale,
+                    'step': step,
+                    'line': 21  # heapq.heappush
+                }
 
     # No path found
     yield {
@@ -189,8 +416,9 @@ def astar_weighted(arr, target=None):
             'steps': step,
             'total_cost': 0
         },
+        'node_scale': node_scale,
         'step': step,
-        'line': 5
+        'line': 20  # return float('inf')
     }
 
 
@@ -207,17 +435,12 @@ def _heuristic(node, goal, nodes):
     Returns:
         Estimated cost from node to goal
     """
-    # Extract layer information
     if isinstance(node, (tuple, list)) and isinstance(goal, (tuple, list)):
         current_layer = node[0]
         goal_layer = goal[0]
-
-        # Layer distance * estimated cost per layer
-        # Average edge weight is ~5, so use conservative estimate
         layer_distance = abs(goal_layer - current_layer)
-        return layer_distance * 3  # Admissible (optimistic) estimate
+        return layer_distance * 3
     else:
-        # Fallback for non-tuple nodes
         return 0
 
 

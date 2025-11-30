@@ -19,6 +19,7 @@ class GraphCanvas(QWidget):
         self.nodes = []
         self.edges = []
         self.node_positions = {}
+        self.node_scale = 1.0
 
         # Common attributes
         self.start = None
@@ -48,6 +49,7 @@ class GraphCanvas(QWidget):
         self.nodes = []
         self.edges = []
         self.node_positions = {}
+        self.node_scale = 1.0
         self.start = None
         self.end = None
         self.visited = set()
@@ -80,6 +82,7 @@ class GraphCanvas(QWidget):
         # Extract node-edge structure (for Dijkstra/A*)
         self.nodes = state.get('nodes', [])
         self.edges = state.get('edges', [])
+        self.node_scale = state.get('node_scale', 1.0)
 
         # Calculate node positions if nodes are present
         if self.nodes:
@@ -320,9 +323,11 @@ class GraphCanvas(QWidget):
                     layers[layer_id] = []
                 layers[layer_id].append(node)
 
-        # Calculate layout
-        width = self.width() - 250  # Leave space for statistics
-        height = self.height() - 100
+        # Calculate layout area (leave room for stats panel/description)
+        width = self.width() - 250
+        top_margin = 60
+        bottom_margin = 120
+        available_height = max(200, self.height() - top_margin - bottom_margin)
 
         num_layers = len(layers)
         if num_layers == 0:
@@ -337,13 +342,19 @@ class GraphCanvas(QWidget):
 
             # Y spacing for nodes in this layer (top to bottom)
             num_nodes = len(nodes_in_layer)
-            y_spacing = height // (num_nodes + 1)
+            if num_nodes == 1:
+                y_positions = [top_margin + available_height // 2]
+            else:
+                y_positions = [
+                    top_margin + int((idx + 1) * available_height / (num_nodes + 1))
+                    for idx in range(num_nodes)
+                ]
 
             # Sort nodes for consistent positioning
             nodes_in_layer.sort()
 
             for node_idx, node in enumerate(nodes_in_layer):
-                y = 80 + node_idx * y_spacing
+                y = y_positions[node_idx]
                 self.node_positions[node] = (x, y)
 
     def _draw_node_edge_graph(self, painter):
@@ -444,23 +455,27 @@ class GraphCanvas(QWidget):
 
             painter.drawPath(path)
 
-            # Draw weight label at curve midpoint
-            # Calculate position on curve (t=0.5)
+            # Draw weight label near the midpoint; spread labels if edges are parallel
             if length > 0:
-                t = 0.5
+                label_offset = 0
+                if edge_counts[key] > 1:
+                    label_offset = (idx - (edge_counts[key] - 1) / 2) * 0.08
+                t = min(0.75, max(0.25, 0.5 + label_offset))
                 label_x = (1-t)**2 * x1 + 2*(1-t)*t * ctrl_x + t**2 * x2
                 label_y = (1-t)**2 * y1 + 2*(1-t)*t * ctrl_y + t**2 * y2
+
+                # Nudge label perpendicular to the edge to avoid overlap
+                if edge_counts[key] > 1:
+                    label_perp_offset = (idx - (edge_counts[key] - 1) / 2) * 12
+                    label_x += perp_x * label_perp_offset
+                    label_y += perp_y * label_perp_offset
             else:
                 label_x = mid_x
                 label_y = mid_y
 
             # Background for weight
-            painter.setBrush(QColor(255, 255, 255, 240))
-            painter.setPen(QPen(QColor(100, 100, 100), 1))
-            painter.drawRoundedRect(int(label_x - 18), int(label_y - 12), 36, 24, 5, 5)
-
-            # Weight text
-            painter.setFont(QFont('Arial', 10, QFont.Weight.Bold))
+            font_size = max(8, int(11 * self.node_scale))
+            painter.setFont(QFont('Arial', font_size, QFont.Weight.Bold))
             if is_in_path:
                 painter.setPen(QPen(QColor(200, 100, 0)))
             else:
@@ -470,6 +485,23 @@ class GraphCanvas(QWidget):
             metrics = painter.fontMetrics()
             text_width = metrics.horizontalAdvance(text)
             text_height = metrics.height()
+
+            # Background sized to text
+            pad_x = max(8, int(10 * self.node_scale))
+            pad_y = max(6, int(8 * self.node_scale))
+            bg_width = text_width + pad_x
+            bg_height = text_height + pad_y
+
+            painter.setBrush(QColor(255, 255, 255, 240))
+            painter.setPen(QPen(QColor(100, 100, 100), 1))
+            painter.drawRoundedRect(
+                int(label_x - bg_width / 2),
+                int(label_y - bg_height / 2),
+                int(bg_width),
+                int(bg_height),
+                6, 6
+            )
+
             painter.drawText(int(label_x - text_width // 2), int(label_y + text_height // 3), text)
 
     def _draw_nodes(self, painter):
@@ -479,7 +511,7 @@ class GraphCanvas(QWidget):
                 continue
 
             x, y = self.node_positions[node]
-            radius = 25
+            radius = max(12, int(25 * self.node_scale))
 
             # Determine node color
             if node == self.start:
@@ -499,7 +531,8 @@ class GraphCanvas(QWidget):
             painter.drawEllipse(x - radius, y - radius, radius * 2, radius * 2)
 
             # Draw node label
-            painter.setFont(QFont('Arial', 10, QFont.Weight.Bold))
+            font_size = max(8, int(10 * self.node_scale))
+            painter.setFont(QFont('Arial', font_size, QFont.Weight.Bold))
             painter.setPen(QPen(QColor(0, 0, 0) if node not in [self.start, self.end] else QColor(255, 255, 255)))
 
             # Format node text
@@ -545,25 +578,16 @@ class GraphCanvas(QWidget):
         line_height = 30
 
         nodes_visited = self.stats.get('nodes_visited', 0)
-        path_length = self.stats.get('path_length', 0)
-        steps = self.stats.get('steps', 0)
+        total_weight = self.stats.get('path_length', 0)
 
         stats_text = [
             f"Nodes Visited: {nodes_visited}",
-            f"Path Length: {path_length}",
-            f"Steps: {steps}"
+            f"Total Weight: {total_weight}",
         ]
 
         for i, text in enumerate(stats_text):
             painter.drawText(panel_x + 15, y_offset + i * line_height, text)
 
-        # Efficiency metric
-        if nodes_visited > 0 and path_length > 0:
-            efficiency = (path_length / nodes_visited) * 100
-            painter.setFont(QFont('Arial', 9))
-            painter.setPen(QPen(QColor(0, 100, 0)))
-            painter.drawText(panel_x + 15, y_offset + 3 * line_height + 5,
-                           f"Efficiency: {efficiency:.1f}%")
 
     def _draw_description(self, painter):
         """Draw description text"""

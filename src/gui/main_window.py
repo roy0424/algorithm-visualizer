@@ -4,7 +4,7 @@ Main Window for Algorithm Visualizer
 from PyQt6.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QComboBox, QSlider, QLabel, QSplitter, QInputDialog, QMessageBox,
-    QStackedWidget
+    QStackedWidget, QSizePolicy
 )
 from PyQt6.QtCore import Qt, QTimer
 from PyQt6.QtGui import QColor
@@ -29,7 +29,9 @@ class MainWindow(QMainWindow):
     def __init__(self):
         super().__init__()
         self.setWindowTitle("Algorithm Visualizer")
-        self.setGeometry(100, 100, 1400, 900)
+        self.resize(1400, 900)
+        self.setMinimumSize(1000, 720)
+        self.apply_theme()
 
         # Algorithm execution state
         self.current_algorithm = None
@@ -47,6 +49,137 @@ class MainWindow(QMainWindow):
         self.setup_ui()
         self.generate_random_array()
 
+    def apply_theme(self):
+        """Apply a modern light theme to the app"""
+        self.setStyleSheet("""
+            QWidget {
+                background-color: #f8fafc;
+                color: #0f172a;
+                font-family: 'Pretendard', 'Segoe UI', 'Noto Sans', sans-serif;
+                font-size: 12pt;
+            }
+            QMainWindow {
+                background-color: #f8fafc;
+            }
+            #controlPanel {
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                box-shadow: 0 10px 30px rgba(15, 23, 42, 0.04);
+            }
+            #infoPanel {
+                background: #ffffff;
+                border: 1px solid #e5e7eb;
+                border-radius: 10px;
+                padding: 6px 10px;
+            }
+            #metricLabel {
+                padding: 4px 10px;
+                border-radius: 8px;
+                background-color: #e6f0ff;
+                color: #2563eb;
+                font-weight: 600;
+            }
+            QLabel {
+                font-size: 12pt;
+            }
+            QComboBox {
+                padding: 6px 12px;
+                border: 1px solid #d7dce3;
+                border-radius: 10px;
+                background: #ffffff;
+                min-width: 170px;
+            }
+            QComboBox:focus {
+                border-color: #3182f6;
+            }
+            QPushButton {
+                padding: 9px 16px;
+                border-radius: 12px;
+                border: 1px solid #3182f6;
+                background-color: #3182f6;
+                color: #ffffff;
+                font-weight: 700;
+                letter-spacing: 0.1px;
+            }
+            QPushButton:hover {
+                background-color: #2a72db;
+            }
+            QPushButton:disabled {
+                background-color: #e5e7eb;
+                border-color: #e5e7eb;
+                color: #94a3b8;
+            }
+            QSlider::groove:horizontal {
+                height: 8px;
+                background: #e5e7eb;
+                border-radius: 4px;
+            }
+            QSlider::handle:horizontal {
+                background: #3182f6;
+                width: 18px;
+                height: 18px;
+                border-radius: 9px;
+                margin: -6px 0;
+            }
+            QSlider::handle:horizontal:hover {
+                background: #2a72db;
+            }
+            QStatusBar {
+                background: #ffffff;
+                border-top: 1px solid #e5e7eb;
+            }
+            #codeEditor {
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                background: #0b1220;
+                color: #e5e7eb;
+                padding: 6px;
+            }
+            #canvasStack {
+                border: 1px solid #e5e7eb;
+                border-radius: 12px;
+                background: #ffffff;
+            }
+            QSplitter::handle {
+                background: #e5e7eb;
+                width: 8px;
+            }
+        """)
+
+    def _set_grid_controls_visible(self, visible: bool):
+        """Toggle grid size controls"""
+        self.grid_size_label.setVisible(visible)
+        self.grid_size_combo.setVisible(visible)
+
+    def _set_level_controls_visible(self, visible: bool):
+        """Toggle level controls for layered graphs"""
+        self.level_label.setVisible(visible)
+        self.level_combo.setVisible(visible)
+
+    def _algorithm_uses_grid(self, category: str, algorithm_name: str) -> bool:
+        """Return True if the selected algorithm uses grid size input"""
+        return category == "Graph Algorithms" and algorithm_name in ["Graph DFS", "Graph BFS"]
+
+    def _algorithm_uses_level(self, category: str, algorithm_name: str) -> bool:
+        """Return True if the selected algorithm uses level input"""
+        return category == "Graph Algorithms" and algorithm_name in ["Dijkstra's Algorithm", "A* Algorithm"]
+
+    def _get_grid_size_value(self, size_text: str) -> int:
+        """Extract numeric grid size from text like '15x15'"""
+        try:
+            return int(size_text.split('x')[0])
+        except (ValueError, IndexError):
+            return 15
+
+    def _get_level_value(self, level_text: str) -> int:
+        """Extract numeric level, clamped to 3-10"""
+        try:
+            level = int(level_text)
+        except ValueError:
+            level = 4
+        return max(3, min(level, 10))
+
     def setup_ui(self):
         """Set up the main user interface"""
         # Central widget
@@ -55,6 +188,8 @@ class MainWindow(QMainWindow):
 
         # Main layout
         main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(16, 16, 16, 16)
+        main_layout.setSpacing(12)
 
         # Top control panel
         control_panel = self.create_control_panel()
@@ -62,6 +197,9 @@ class MainWindow(QMainWindow):
 
         # Splitter for code editor and visualization
         splitter = QSplitter(Qt.Orientation.Horizontal)
+        splitter.setChildrenCollapsible(False)
+        splitter.setStretchFactor(0, 1)
+        splitter.setStretchFactor(1, 2)
 
         # Code editor (left side)
         self.code_editor = self.create_code_editor()
@@ -82,7 +220,11 @@ class MainWindow(QMainWindow):
     def create_control_panel(self):
         """Create the top control panel with algorithm selection and controls"""
         panel = QWidget()
+        panel.setObjectName("controlPanel")
         layout = QHBoxLayout(panel)
+        layout.setContentsMargins(12, 8, 12, 8)
+        layout.setSpacing(10)
+        panel.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Fixed)
 
         # Algorithm category selection
         layout.addWidget(QLabel("Category:"))
@@ -102,9 +244,9 @@ class MainWindow(QMainWindow):
         self.algorithm_combo.currentTextChanged.connect(self.on_algorithm_changed)
         layout.addWidget(self.algorithm_combo)
 
-        layout.addSpacing(30)
+        layout.addSpacing(10)
 
-        # Grid size selector (for graph algorithms)
+        # Grid size selector (for grid-based graph algorithms)
         self.grid_size_label = QLabel("Grid Size:")
         layout.addWidget(self.grid_size_label)
         self.grid_size_combo = QComboBox()
@@ -114,6 +256,17 @@ class MainWindow(QMainWindow):
         layout.addWidget(self.grid_size_combo)
         self.grid_size_label.hide()
         self.grid_size_combo.hide()
+
+        # Level selector (for layered weighted graphs - Dijkstra/A*)
+        self.level_label = QLabel("Levels:")
+        layout.addWidget(self.level_label)
+        self.level_combo = QComboBox()
+        self.level_combo.addItems([str(i) for i in range(3, 11)])  # 3 to 10
+        self.level_combo.setCurrentIndex(1)  # Default to 4 levels
+        self.level_combo.currentTextChanged.connect(self.on_level_changed)
+        layout.addWidget(self.level_combo)
+        self.level_label.hide()
+        self.level_combo.hide()
 
         # Data generation button (for non-graph algorithms)
         self.generate_button = QPushButton("Random Data")
@@ -153,7 +306,7 @@ class MainWindow(QMainWindow):
         self.speed_slider.setMinimum(1)
         self.speed_slider.setMaximum(100)
         self.speed_slider.setValue(50)
-        self.speed_slider.setFixedWidth(150)
+        self.speed_slider.setMinimumWidth(140)
         self.speed_slider.valueChanged.connect(self.on_speed_changed)
         layout.addWidget(self.speed_slider)
 
@@ -167,6 +320,7 @@ class MainWindow(QMainWindow):
     def create_code_editor(self):
         """Create the code editor with syntax highlighting"""
         editor = QsciScintilla()
+        editor.setObjectName("codeEditor")
 
         # Set Python lexer for syntax highlighting
         lexer = QsciLexerPython()
@@ -197,17 +351,23 @@ def example_algorithm(arr):
         """Create the visualization area"""
         widget = QWidget()
         layout = QVBoxLayout(widget)
+        layout.setContentsMargins(8, 8, 8, 8)
+        layout.setSpacing(8)
 
         # Info panel
         info_widget = QWidget()
         info_layout = QHBoxLayout(info_widget)
+        info_widget.setObjectName("infoPanel")
+        info_layout.setContentsMargins(12, 8, 12, 8)
 
         self.complexity_label = QLabel("Time Complexity: O(?)")
+        self.complexity_label.setObjectName("metricLabel")
         info_layout.addWidget(self.complexity_label)
 
         info_layout.addSpacing(20)
 
         self.space_label = QLabel("Space Complexity: O(?)")
+        self.space_label.setObjectName("metricLabel")
         info_layout.addWidget(self.space_label)
 
         info_layout.addStretch()
@@ -216,25 +376,33 @@ def example_algorithm(arr):
 
         # Visualization canvas - use stacked widget to switch between different canvas types
         self.canvas_stack = QStackedWidget()
+        self.canvas_stack.setObjectName("canvasStack")
+        self.canvas_stack.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         # Create different canvas types
         self.standard_canvas = VisualizationCanvas()
         self.standard_canvas.setStyleSheet("VisualizationCanvas { background-color: white; border: 2px solid #ccc; }")
+        self.standard_canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.merge_sort_canvas = MergeSortCanvas()
         self.merge_sort_canvas.setStyleSheet("MergeSortCanvas { background-color: white; border: 2px solid #ccc; }")
+        self.merge_sort_canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.tree_canvas = TreeCanvas()
         self.tree_canvas.setStyleSheet("TreeCanvas { background-color: white; border: 2px solid #ccc; }")
+        self.tree_canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.dp_canvas = DPCanvas()
         self.dp_canvas.setStyleSheet("DPCanvas { background-color: white; border: 2px solid #ccc; }")
+        self.dp_canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.graph_canvas = GraphCanvas()
         self.graph_canvas.setStyleSheet("GraphCanvas { background-color: white; border: 2px solid #ccc; }")
+        self.graph_canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         self.grid_pathfinding_canvas = GridPathfindingCanvas()
         self.grid_pathfinding_canvas.setStyleSheet("GridPathfindingCanvas { background-color: white; border: 2px solid #ccc; }")
+        self.grid_pathfinding_canvas.setSizePolicy(QSizePolicy.Policy.Expanding, QSizePolicy.Policy.Expanding)
 
         # Add canvases to stack
         self.canvas_stack.addWidget(self.standard_canvas)  # Index 0
@@ -267,14 +435,21 @@ def example_algorithm(arr):
         algo_func, algo_info = get_algorithm(category, algorithm_name)
 
         # Show/hide UI elements based on category
+        grid_required = self._algorithm_uses_grid(category, algorithm_name)
+        level_required = self._algorithm_uses_level(category, algorithm_name)
+        self._set_grid_controls_visible(grid_required)
+        self._set_level_controls_visible(level_required)
+
         if category == "Graph Algorithms":
-            self.grid_size_label.show()
-            self.grid_size_combo.show()
             self.generate_button.hide()
             self.input_button.hide()
+            if grid_required:
+                size = self._get_grid_size_value(self.grid_size_combo.currentText())
+                self.current_array = [size]
+            elif level_required:
+                level = self._get_level_value(self.level_combo.currentText())
+                self.current_array = [level]
         else:
-            self.grid_size_label.hide()
-            self.grid_size_combo.hide()
             self.generate_button.show()
             self.input_button.show()
 
@@ -597,17 +772,36 @@ def example_algorithm(arr):
 
     def on_grid_size_changed(self, size_text):
         """Handle grid size change for graph algorithms"""
-        # Extract size from text (e.g., "15x15" -> 15)
-        size = int(size_text.split('x')[0])
+        category = self.category_combo.currentText()
+        algorithm_name = self.algorithm_combo.currentText()
 
-        # Update current array with size marker
-        self.current_array = [size]  # Use size as array content
+        if not self._algorithm_uses_grid(category, algorithm_name):
+            self.statusBar().showMessage("Grid size not used for this algorithm")
+            return
+
+        size = self._get_grid_size_value(size_text)
+        self.current_array = [size]
 
         # Reinitialize graph preview
-        category = self.category_combo.currentText()
-        if category == "Graph Algorithms" and self.current_algorithm:
+        if self.current_algorithm:
             self._initialize_graph_preview()
             self.statusBar().showMessage(f"Grid size changed to {size_text}")
+
+    def on_level_changed(self, level_text):
+        """Handle level change for layered weighted graph algorithms"""
+        category = self.category_combo.currentText()
+        algorithm_name = self.algorithm_combo.currentText()
+
+        if not self._algorithm_uses_level(category, algorithm_name):
+            self.statusBar().showMessage("Levels not used for this algorithm")
+            return
+
+        level = self._get_level_value(level_text)
+        self.current_array = [level]
+
+        if self.current_algorithm:
+            self._initialize_graph_preview()
+            self.statusBar().showMessage(f"Levels set to {level}")
 
     def on_speed_changed(self, value):
         """Handle speed slider change"""

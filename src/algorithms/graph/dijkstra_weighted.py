@@ -23,7 +23,7 @@ def dijkstra_weighted(arr, target=None):
         return
 
     # Generate weighted graph
-    nodes, edges, adj_list, start, goal = _generate_weighted_graph(arr)
+    nodes, edges, adj_list, start, goal, node_scale = _generate_weighted_graph(arr)
 
     if not nodes:
         return
@@ -51,24 +51,42 @@ def dijkstra_weighted(arr, target=None):
         'path': [],
         'description': f"Dijkstra: Starting from node {start} to {goal}",
         'stats': {'nodes_visited': 0, 'path_length': 0, 'steps': 0, 'total_cost': 0},
+        'node_scale': node_scale,
         'step': 0,
-        'line': 0
+        'line': 0  # def dijkstra...
     }
 
     step = 0
 
     while pq:
+        # Loop start
+        yield {
+            'action': 'loop',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': None,
+            'highlighted_edges': [],
+            'path': [],
+            'description': "Dijkstra: Next iteration",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': 0
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 6  # while pq:
+        }
+
         current_dist, current = heapq.heappop(pq)
 
-        if current in visited:
-            continue
-
-        visited.add(current)
-        step += 1
-
-        # Show current node being processed
+        # Highlight pop
         yield {
-            'action': 'visit',
+            'action': 'pop',
             'nodes': nodes,
             'edges': edges,
             'start': start,
@@ -77,15 +95,86 @@ def dijkstra_weighted(arr, target=None):
             'current': current,
             'highlighted_edges': [],
             'path': [],
-            'description': f"Dijkstra: Visiting node {current} (distance: {current_dist:.1f})",
+            'description': f"Dijkstra: Pop {current} with dist {current_dist:.1f}",
             'stats': {
                 'nodes_visited': len(visited),
                 'path_length': 0,
                 'steps': step,
                 'total_cost': int(current_dist)
             },
+            'node_scale': node_scale,
             'step': step,
-            'line': 1
+            'line': 7  # heapq.heappop(pq)
+        }
+
+        # Highlight visited check
+        yield {
+            'action': 'check_visit',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': current,
+            'highlighted_edges': [],
+            'path': [],
+            'description': f"Dijkstra: Checking if {current} already visited",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': int(current_dist)
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 8  # if node in visited
+        }
+
+        if current in visited:
+            yield {
+                'action': 'skip_visited',
+                'nodes': nodes,
+                'edges': edges,
+                'start': start,
+                'end': goal,
+                'visited': list(visited),
+                'current': current,
+                'highlighted_edges': [],
+                'path': [],
+                'description': f"Dijkstra: {current} already visited, skipping",
+                'stats': {
+                    'nodes_visited': len(visited),
+                    'path_length': 0,
+                    'steps': step,
+                    'total_cost': int(current_dist)
+                },
+                'node_scale': node_scale,
+                'step': step,
+                'line': 9  # continue
+            }
+            continue
+
+        # Highlight goal check
+        yield {
+            'action': 'check_goal',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': current,
+            'highlighted_edges': [],
+            'path': [],
+            'description': f"Dijkstra: Is {current} the goal?",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': int(current_dist)
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 10  # if node == goal
         }
 
         # Check if we reached the goal
@@ -117,21 +206,92 @@ def dijkstra_weighted(arr, target=None):
                 'description': f"Dijkstra: Goal reached! Cost: {int(distances[goal])}, Nodes visited: {len(visited)}",
                 'stats': {
                     'nodes_visited': len(visited),
-                    'path_length': len(path),
+                    'path_length': int(distances[goal]),
                     'steps': step,
                     'total_cost': int(distances[goal])
                 },
+                'node_scale': node_scale,
                 'step': step,
-                'line': 5
+                'line': 10  # if node == goal
             }
             return
 
+        visited.add(current)
+        step += 1
+
+        # Show current node being processed (after marking visited)
+        yield {
+            'action': 'visit',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': current,
+            'highlighted_edges': [],
+            'path': [],
+            'description': f"Dijkstra: Visiting node {current} (distance: {current_dist:.1f})",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': int(current_dist)
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 12  # visited.add(node)
+        }
+
         # Check neighbors
+        yield {
+            'action': 'neighbors',
+            'nodes': nodes,
+            'edges': edges,
+            'start': start,
+            'end': goal,
+            'visited': list(visited),
+            'current': current,
+            'highlighted_edges': [],
+            'path': [],
+            'description': f"Dijkstra: Exploring neighbors of {current}",
+            'stats': {
+                'nodes_visited': len(visited),
+                'path_length': 0,
+                'steps': step,
+                'total_cost': 0
+            },
+            'node_scale': node_scale,
+            'step': step,
+            'line': 14  # for neighbor
+        }
         for neighbor, weight in adj_list.get(current, []):
             if neighbor in visited:
                 continue
 
             new_dist = distances[current] + weight
+
+            # Highlight distance computation
+            yield {
+                'action': 'compute',
+                'nodes': nodes,
+                'edges': edges,
+                'start': start,
+                'end': goal,
+                'visited': list(visited),
+                'current': current,
+                'highlighted_edges': [(current, neighbor)],
+                'path': [],
+                'description': f"Dijkstra: Compute dist to {neighbor}: {distances[current]:.0f} + {weight} = {new_dist:.0f}",
+                'stats': {
+                    'nodes_visited': len(visited),
+                    'path_length': 0,
+                    'steps': step,
+                    'total_cost': 0
+                },
+                'node_scale': node_scale,
+                'step': step,
+                'line': 15  # new_dist calculation
+            }
 
             # Highlight edge being considered
             yield {
@@ -149,17 +309,84 @@ def dijkstra_weighted(arr, target=None):
                     'nodes_visited': len(visited),
                     'path_length': 0,
                     'steps': step,
-                    'total_cost': 0
-                },
-                'step': step,
-                'line': 2
+                'total_cost': 0
+            },
+            'node_scale': node_scale,
+            'step': step,
+                'line': 14  # for neighbor, weight in graph[node]
             }
 
             # Relax edge if shorter path found
+            yield {
+                'action': 'check_better',
+                'nodes': nodes,
+                'edges': edges,
+                'start': start,
+                'end': goal,
+                'visited': list(visited),
+                'current': current,
+                'highlighted_edges': [(current, neighbor)],
+                'path': [],
+                'description': f"Dijkstra: Is {new_dist:.0f} < current dist to {neighbor}?",
+                'stats': {
+                    'nodes_visited': len(visited),
+                    'path_length': 0,
+                    'steps': step,
+                    'total_cost': 0
+                },
+                'node_scale': node_scale,
+                'step': step,
+                'line': 16  # if new_dist < distances[neighbor]
+            }
+
             if new_dist < distances[neighbor]:
+                yield {
+                    'action': 'compare_update',
+                    'nodes': nodes,
+                    'edges': edges,
+                    'start': start,
+                    'end': goal,
+                    'visited': list(visited),
+                    'current': current,
+                    'highlighted_edges': [(current, neighbor)],
+                    'path': [],
+                    'description': f"Dijkstra: Updating {neighbor} to {new_dist:.0f}",
+                    'stats': {
+                        'nodes_visited': len(visited),
+                        'path_length': 0,
+                        'steps': step,
+                        'total_cost': 0
+                    },
+                    'node_scale': node_scale,
+                    'step': step,
+                    'line': 17  # distances[neighbor] = new_dist
+                }
+
                 distances[neighbor] = new_dist
                 parent[neighbor] = current
                 heapq.heappush(pq, (new_dist, neighbor))
+
+                yield {
+                    'action': 'push_queue',
+                    'nodes': nodes,
+                    'edges': edges,
+                    'start': start,
+                    'end': goal,
+                    'visited': list(visited),
+                    'current': current,
+                    'highlighted_edges': [(current, neighbor)],
+                    'path': [],
+                    'description': f"Dijkstra: Push {neighbor} with dist {new_dist:.0f} to queue",
+                    'stats': {
+                        'nodes_visited': len(visited),
+                        'path_length': 0,
+                        'steps': step,
+                        'total_cost': 0
+                    },
+                    'node_scale': node_scale,
+                    'step': step,
+                    'line': 18  # heapq.heappush
+                }
 
     # No path found
     yield {
@@ -179,28 +406,30 @@ def dijkstra_weighted(arr, target=None):
             'steps': step,
             'total_cost': 0
         },
+        'node_scale': node_scale,
         'step': step,
-        'line': 5
+        'line': 20  # return float('inf')
     }
 
 
 def _generate_weighted_graph(arr):
     """
     Generate a layered weighted graph (neural network style)
-    Structure: Start (left) → Hidden Layers → Goal (right)
+    Structure: Start (left) -> Hidden Layers -> Goal (right)
 
     Args:
-        arr: Input array (first element determines number of layers)
+        arr: Input array (first element determines number of layers 3-10)
 
     Returns:
-        Tuple of (nodes, edges, adjacency_list, start_node, goal_node)
+        Tuple of (nodes, edges, adjacency_list, start_node, goal_node, node_scale)
     """
-    # Set fixed seed for consistency
-    random.seed(42)
+    level = arr[0] if arr and arr[0] > 0 else 4
 
-    # Determine number of layers (3-5)
-    size = arr[0] if arr and arr[0] > 0 else 15
-    num_layers = min(max(3, size // 10), 5)
+    # Deterministic seed per level so each level shows a fixed graph
+    random.seed(level)
+
+    # Determine number of layers (3-10)
+    num_layers = max(3, min(int(level), 10))
 
     # Build layered structure
     nodes = []
@@ -232,18 +461,35 @@ def _generate_weighted_graph(arr):
     adj_list[goal] = []
     layers.append([goal])
 
-    # Connect layers: each node connects to 2-3 nodes in next layer
+    # Connect layers: ensure full fan-out from start and full fan-in to goal
     for layer_idx in range(len(layers) - 1):
         current_layer = layers[layer_idx]
         next_layer = layers[layer_idx + 1]
 
-        for node in current_layer:
-            # Connect to 2-3 random nodes in next layer (reduced from 2-4)
-            num_connections = min(random.randint(2, 3), len(next_layer))
-            targets = random.sample(next_layer, num_connections)
+        targets_per_node = {}
+        if layer_idx == 0:
+            # Start -> all nodes in next layer
+            targets_per_node = {node: next_layer for node in current_layer}
+        elif layer_idx == len(layers) - 2:
+            # All nodes in previous layer -> goal
+            targets_per_node = {node: next_layer for node in current_layer}
+        else:
+            # For deeper graphs, reduce connections to limit overlap
+            dense = len(layers) < 7
+            min_conn = 2 if dense else 1
+            max_conn = 3 if dense else 2
+            for node in current_layer:
+                upper = min(max_conn, len(next_layer))
+                lower = min(min_conn, upper)
+                num_connections = random.randint(lower, upper) if upper > 0 else 0
+                targets_per_node[node] = random.sample(next_layer, num_connections)
 
+        for node, targets in targets_per_node.items():
             for target in targets:
-                # Generate weight
+                # Avoid duplicate edges
+                if any(e[0] == node and e[1] == target for e in edges):
+                    continue
+
                 weight = random.randint(1, 10)
 
                 # Add edge (directed: current -> next)
@@ -252,26 +498,10 @@ def _generate_weighted_graph(arr):
                 # For pathfinding, make it bidirectional
                 adj_list[target].append((node, weight))
 
-    # Add one skip connection for alternative path (reduced from 1-2)
-    if len(layers) >= 3:
-        layer_idx = 0  # Only from first layer
-        current_layer = layers[layer_idx]
-        skip_layer = layers[layer_idx + 2]
+    # Scale nodes slightly down as layers increase to avoid overlap
+    node_scale = max(0.6, 1.05 - num_layers * 0.05)
 
-        # Add just 1 skip connection
-        node = random.choice(current_layer)
-        target = random.choice(skip_layer)
-
-        # Check if edge already exists
-        exists = any((e[0] == node and e[1] == target) for e in edges)
-
-        if not exists:
-            weight = random.randint(5, 12)
-            edges.append((node, target, weight))
-            adj_list[node].append((target, weight))
-            adj_list[target].append((node, weight))
-
-    return nodes, edges, adj_list, start, goal
+    return nodes, edges, adj_list, start, goal, node_scale
 
 
 def get_algorithm_info():

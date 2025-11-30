@@ -47,12 +47,23 @@ def graph_bfs(arr, target=None):
     parent = {}
 
     while queue:
-        # Dequeue
+        yield {
+            'action': 'loop',
+            'grid': grid,
+            'start': start,
+            'end': end,
+            'visited': list(visited),
+            'current': None,
+            'path': [],
+            'stack_queue': {'type': 'queue', 'items': list(queue)},
+            'description': 'BFS iteration',
+            'line': 4  # while queue:
+        }
+
         current = queue.popleft()
 
-        # Show current cell being visited
         yield {
-            'action': 'visit',
+            'action': 'dequeue',
             'grid': grid,
             'start': start,
             'end': end,
@@ -60,13 +71,11 @@ def graph_bfs(arr, target=None):
             'current': current,
             'path': [],
             'stack_queue': {'type': 'queue', 'items': list(queue)},
-            'description': f'Visiting cell {current}',
-            'line': 1
+            'description': f'Dequeue {current}',
+            'line': 5  # node = queue.popleft()
         }
 
-        # Check if we reached the end
         if current == end:
-            # Reconstruct path
             path = []
             node = end
             while node in parent:
@@ -85,11 +94,10 @@ def graph_bfs(arr, target=None):
                 'path': path,
                 'stack_queue': {'type': 'queue', 'items': []},
                 'description': f'Path found! Length: {len(path)}',
-                'line': 3
+                'line': 11  # return visited
             }
             return
 
-        # Explore neighbors (up, right, down, left)
         row, col = current
         directions = [(-1, 0), (0, 1), (1, 0), (0, -1)]
 
@@ -97,26 +105,38 @@ def graph_bfs(arr, target=None):
             new_row, new_col = row + dr, col + dc
             neighbor = (new_row, new_col)
 
-            # Check bounds and obstacles
             if (0 <= new_row < rows and 0 <= new_col < cols and
                 grid[new_row][new_col] != 1 and neighbor not in visited):
 
                 visited.add(neighbor)
                 parent[neighbor] = current
-                queue.append(neighbor)
 
-                # Highlight neighbor being explored
                 yield {
-                    'action': 'explore',
+                    'action': 'mark_neighbor',
                     'grid': grid,
                     'start': start,
                     'end': end,
                     'visited': list(visited),
-                    'current': current,
+                    'current': neighbor,
                     'path': [],
                     'stack_queue': {'type': 'queue', 'items': list(queue)},
-                    'description': f'Exploring neighbor {neighbor}',
-                    'line': 2
+                    'description': f'Mark {neighbor} visited',
+                    'line': 8  # visited.add(neighbor)
+                }
+
+                queue.append(neighbor)
+
+                yield {
+                    'action': 'enqueue',
+                    'grid': grid,
+                    'start': start,
+                    'end': end,
+                    'visited': list(visited),
+                    'current': neighbor,
+                    'path': [],
+                    'stack_queue': {'type': 'queue', 'items': list(queue)},
+                    'description': f'Enqueue {neighbor}',
+                    'line': 9  # queue.append(neighbor)
                 }
 
     # No path found
